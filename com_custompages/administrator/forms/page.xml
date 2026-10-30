@@ -32,7 +32,7 @@
             type="editor"
             label="COM_CUSTOMPAGES_FIELD_HTML_LABEL"
             editor="codemirror"
-            syntax="html"
+            syntax="php"
             filter="raw"
             buttons="false"
             height="600px"

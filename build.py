@@ -26,10 +26,10 @@ ROOT = pathlib.Path(__file__).resolve().parent
 SRC = ROOT / "com_custompages"
 ELEMENT = "com_custompages"
 MANIFEST = "custompages.xml"
-INCLUDE = [MANIFEST, "administrator", "site", "language", "media"]
+INCLUDE = [MANIFEST, "script.php", "administrator", "site", "language", "media"]
 
 # Joomla versions offered the update, matched as a regex against the site's version.
-TARGET_PLATFORM = r"(4\.4|5\.[0-9]+)"
+TARGET_PLATFORM = r"5\.[0-9]+"
 PHP_MINIMUM = "8.1"
 
 

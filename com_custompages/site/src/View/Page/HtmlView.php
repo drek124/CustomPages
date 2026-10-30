@@ -18,10 +18,11 @@ use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 // phpcs:enable PSR1.Files.SideEffects
 
 /**
- * Outputs the stored HTML document as the entire response.
+ * Outputs the stored page as the entire response.
  *
  * The template and the Joomla document are never rendered: output buffers are discarded,
- * headers are sent, the HTML is echoed untouched and the application is closed.
+ * the page is run as PHP, headers are sent, its output is echoed and the application is closed.
+ * A page without `<?php` tags is plain HTML and comes out byte for byte.
  */
 class HtmlView extends BaseHtmlView
 {
@@ -63,7 +64,12 @@ class HtmlView extends BaseHtmlView
             ob_end_clean();
         }
 
-        $app->setHeader('Content-Type', 'text/html; charset=utf-8', true);
+        $output = self::runPhp($page, $app, $model->getState('params'));
+
+        // The page may have chosen its own Content-Type (e.g. JSON); only default it.
+        if (!self::hasContentType($app)) {
+            $app->setHeader('Content-Type', 'text/html; charset=utf-8', true);
+        }
 
         if ($cacheControl !== '') {
             $app->setHeader('Cache-Control', $cacheControl, true);
@@ -71,8 +77,69 @@ class HtmlView extends BaseHtmlView
 
         $app->sendHeaders();
 
-        echo $page->html;
+        echo $output;
 
         $app->close();
+    }
+
+    /**
+     * Runs the page as PHP and returns what it printed.
+     *
+     * The source is evaluated like a PHP template file: it starts in HTML mode, so code goes
+     * inside `<?php ... ?>` tags. `$app`, `$page` and `$params` (menu item params) are in scope.
+     * Anything it throws, including a \ParseError, propagates to Joomla's error page.
+     *
+     * @param   object                                           $page    The page row.
+     * @param   \Joomla\CMS\Application\CMSApplicationInterface  $app     The application.
+     * @param   \Joomla\Registry\Registry                         $params  The menu item params.
+     *
+     * @return  string
+     */
+    private static function runPhp(object $page, $app, $params): string
+    {
+        ob_start();
+
+        try {
+            (static function ($app, $page, $params) {
+                eval('?>' . $page->html);
+            })($app, $page, $params);
+        } catch (\Throwable $e) {
+            ob_end_clean();
+
+            throw $e;
+        }
+
+        // The script may have opened buffers of its own; collapse them all into the output.
+        $output = '';
+
+        while (ob_get_level()) {
+            $output = ob_get_clean() . $output;
+        }
+
+        return $output;
+    }
+
+    /**
+     * Whether a Content-Type header was set, through Joomla or PHP's header().
+     *
+     * @param   \Joomla\CMS\Application\CMSApplicationInterface  $app  The application.
+     *
+     * @return  boolean
+     */
+    private static function hasContentType($app): bool
+    {
+        foreach ($app->getHeaders() as $header) {
+            if (strcasecmp($header['name'], 'Content-Type') === 0) {
+                return true;
+            }
+        }
+
+        foreach (headers_list() as $line) {
+            if (stripos($line, 'Content-Type:') === 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

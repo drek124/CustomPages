@@ -9,6 +9,7 @@
 
 namespace Joomla\Component\Custompages\Administrator\Model;
 
+use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Factory\MVCFactoryInterface;
 use Joomla\CMS\MVC\Model\ListModel;
 use Joomla\Database\ParameterType;
@@ -54,6 +55,11 @@ class PagesModel extends ListModel
      */
     protected function populateState($ordering = 'a.title', $direction = 'asc')
     {
+        // Keep the modal picker's filters apart from the main list's.
+        if ($layout = Factory::getApplication()->getInput()->getCmd('layout')) {
+            $this->context .= '.' . $layout;
+        }
+
         parent::populateState($ordering, $direction);
     }
 
