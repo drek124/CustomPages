@@ -52,6 +52,10 @@ php cli/joomla.php extension:install --path=/path/to/com_custompages-1.0.0.zip
 
 The package uses `method="upgrade"`, so you can install a newer ZIP over an existing one.
 
+### Updates
+
+Custom Pages uses **Joomla's built-in update system**. New releases appear under **System → Update → Extensions** (and in the update notifications), and you install them with one click like any other extension. Joomla verifies each download against the SHA-512 checksum published in the update feed.
+
 ## Usage
 
 1. **Components → Custom Pages → New.**
@@ -116,7 +120,9 @@ Notes:
 
 1. Bump `<version>` in `com_custompages/custompages.xml` (and add `administrator/sql/updates/mysql/<version>.sql` if the schema changes).
 2. Publish a GitHub release tagged `v<version>` (or `<version>`).
-3. The **Release** workflow lints the code, builds `com_custompages-<version>.zip`, and attaches it to the release. It fails if the tag doesn't match the manifest version.
+3. The **Release** workflow lints the code, builds `com_custompages-<version>.zip` and the Joomla update feed `updates.xml`, and attaches both to the release. It fails if the tag doesn't match the manifest version, or if the manifest's update server doesn't point at this repository.
+
+Installed sites poll `https://github.com/drek124/CustomPages/releases/latest/download/updates.xml`, which always resolves to the newest **full** release. Pre-releases are never offered as updates, so publishing a release is what ships the update. If the repository is renamed or moved, update `<updateservers>` in the manifest to match.
 
 The **CI** workflow lints the code on PHP 8.1–8.4 and builds the ZIP on every push to `main` and on every pull request. The ZIP is kept as a workflow artifact.
 

@@ -41,6 +41,10 @@
         <folder>css</folder>
     </media>
 
+    <updateservers>
+        <server type="extension" priority="1" name="Custom Pages Updates">https://github.com/drek124/CustomPages/releases/latest/download/updates.xml</server>
+    </updateservers>
+
     <administration>
         <menu img="class:file-code">COM_CUSTOMPAGES</menu>
         <submenu>

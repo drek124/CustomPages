@@ -1,7 +1,9 @@
 name: Release
 
-# Builds com_custompages-<version>.zip and attaches it to the GitHub release.
+# Builds com_custompages-<version>.zip plus the Joomla update feed (updates.xml)
+# and attaches both to the GitHub release.
 # The release tag (e.g. v1.2.0 or 1.2.0) must match <version> in custompages.xml.
+# Only full releases update Joomla sites: "latest" skips pre-releases.
 
 on:
   release:
@@ -38,19 +40,22 @@ jobs:
           find com_custompages -name '*.xml' -print0 \
             | xargs -0 -n1 python -c "import sys, xml.dom.minidom as m; m.parse(sys.argv[1]); print('ok', sys.argv[1])"
 
-      - name: Build ZIP
+      - name: Build ZIP and update feed
         id: build
         env:
           TAG: ${{ github.event.release.tag_name }}
         run: |
           version="${TAG#v}"
-          zip="$(python build.py --version "$version" --out-dir dist)"
-          echo "zip=$zip" >> "$GITHUB_OUTPUT"
-          unzip -l "$zip"
+          python build.py --version "$version" --out-dir dist --repo "$GITHUB_REPOSITORY" --tag "$TAG"
+          echo "zip=dist/com_custompages-$version.zip" >> "$GITHUB_OUTPUT"
+          unzip -l "dist/com_custompages-$version.zip"
+          cat dist/updates.xml
 
-      - name: Attach ZIP to release
+      # updates.xml on the newest release is what Joomla sites poll through
+      # releases/latest/download/updates.xml (see <updateservers> in the manifest).
+      - name: Attach ZIP and updates.xml to release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
           ZIP: ${{ steps.build.outputs.zip }}
-        run: gh release upload "$TAG" "$ZIP" --clobber --repo "$GITHUB_REPOSITORY"
+        run: gh release upload "$TAG" "$ZIP" dist/updates.xml --clobber --repo "$GITHUB_REPOSITORY"
