@@ -1,0 +1,14 @@
+{
+  "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
+  "name": "com_custompages",
+  "version": "1.0.0",
+  "description": "Assets for com_custompages",
+  "license": "GPL-2.0-or-later",
+  "assets": [
+    {
+      "name": "com_custompages.admin-page",
+      "type": "style",
+      "uri": "com_custompages/admin-page.css"
+    }
+  ]
+}

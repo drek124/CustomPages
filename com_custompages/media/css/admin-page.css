@@ -1,0 +1,16 @@
+/* com_custompages: page edit screen */
+
+/* Give the HTML editor the full column instead of the label/control split. */
+.custompages-editor .control-group {
+  display: block;
+}
+
+.custompages-editor .control-label {
+  width: auto;
+  padding-bottom: .5rem;
+}
+
+.custompages-editor .controls {
+  min-width: 0;
+  margin-left: 0;
+}

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="component" method="upgrade">
+    <name>com_custompages</name>
+    <author>drek124</author>
+    <authorUrl>https://github.com/drek124</authorUrl>
+    <creationDate>2026-10</creationDate>
+    <copyright>(C) 2026 drek124</copyright>
+    <license>GNU General Public License version 2 or later; see LICENSE.txt</license>
+    <version>1.0.0</version>
+    <description>COM_CUSTOMPAGES_XML_DESCRIPTION</description>
+    <namespace path="src">Joomla\Component\Custompages</namespace>
+
+    <install>
+        <sql>
+            <file driver="mysql" charset="utf8">sql/install.mysql.utf8.sql</file>
+        </sql>
+    </install>
+    <uninstall>
+        <sql>
+            <file driver="mysql" charset="utf8">sql/uninstall.mysql.utf8.sql</file>
+        </sql>
+    </uninstall>
+    <update>
+        <schemas>
+            <schemapath type="mysql">sql/updates/mysql</schemapath>
+        </schemas>
+    </update>
+
+    <files folder="site">
+        <folder>src</folder>
+        <folder>tmpl</folder>
+    </files>
+
+    <languages folder="language">
+        <language tag="en-GB">en-GB/com_custompages.ini</language>
+        <language tag="en-GB">en-GB/com_custompages.sys.ini</language>
+    </languages>
+
+    <media destination="com_custompages" folder="media">
+        <filename>joomla.asset.json</filename>
+        <folder>css</folder>
+    </media>
+
+    <administration>
+        <menu img="class:file-code">COM_CUSTOMPAGES</menu>
+        <submenu>
+            <menu link="option=com_custompages&amp;view=pages" view="pages">COM_CUSTOMPAGES_MENU_PAGES</menu>
+        </submenu>
+        <files folder="administrator">
+            <filename>access.xml</filename>
+            <filename>config.xml</filename>
+            <folder>forms</folder>
+            <folder>services</folder>
+            <folder>sql</folder>
+            <folder>src</folder>
+            <folder>tmpl</folder>
+        </files>
+        <languages folder="administrator/language">
+            <language tag="en-GB">en-GB/com_custompages.ini</language>
+            <language tag="en-GB">en-GB/com_custompages.sys.ini</language>
+        </languages>
+    </administration>
+</extension>

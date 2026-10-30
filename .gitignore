@@ -1,0 +1,4 @@
+# Build output (release ZIPs are attached by the Release workflow)
+/dist/
+/com_custompages-*.zip
+__pycache__/
