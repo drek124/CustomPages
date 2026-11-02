@@ -72,4 +72,32 @@ class PageModel extends ItemModel
 
         return $this->_item[$pk];
     }
+
+    /**
+     * Returns a site template style of an enabled template, or null.
+     *
+     * @param   integer  $id  The template style ID.
+     *
+     * @return  object|null  With `template`, `params`, `inheritable` and `parent`.
+     */
+    public function getTemplateStyle(int $id): ?object
+    {
+        $db    = $this->getDatabase();
+        $query = $db->getQuery(true)
+            ->select($db->quoteName(['s.template', 's.params', 's.inheritable', 's.parent']))
+            ->from($db->quoteName('#__template_styles', 's'))
+            ->join('INNER', $db->quoteName('#__extensions', 'e'), $db->quoteName('e.element') . ' = ' . $db->quoteName('s.template'))
+            ->where(
+                [
+                    $db->quoteName('s.id') . ' = :id',
+                    $db->quoteName('s.client_id') . ' = 0',
+                    $db->quoteName('e.client_id') . ' = 0',
+                    $db->quoteName('e.type') . ' = ' . $db->quote('template'),
+                    $db->quoteName('e.enabled') . ' = 1',
+                ]
+            )
+            ->bind(':id', $id, ParameterType::INTEGER);
+
+        return $db->setQuery($query)->loadObject() ?: null;
+    }
 }

@@ -8,7 +8,7 @@ Write a complete HTML document in CodeMirror, add `<?php ?>` wherever you need i
 
 ![Joomla](https://img.shields.io/badge/Joomla-5.x-5091cd?logo=joomla&logoColor=white)
 ![PHP](https://img.shields.io/badge/PHP-8.1%2B-777bb4?logo=php&logoColor=white)
-![Version](https://img.shields.io/badge/version-1.1.0-informational)
+![Version](https://img.shields.io/badge/version-1.2.0-informational)
 ![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)
 
 </div>
@@ -103,9 +103,13 @@ Editing a page means **running arbitrary PHP on your server**, with full access 
 - Joomla's **Text Filters** do not apply to this field (`filter="raw"`, on purpose). That is the whole point of the component, and it is also the risk.
 - Page **titles** are escaped in the admin list. Stored pages are never escaped or filtered on the frontend.
 
+## Rendering inside a template
+
+By default (**Template Style: No template**) the page is the complete response. On the menu item's **Template** tab you can instead pick **Default** (the style Joomla would normally use for that menu item) or any site template style. A **Position** is then required: Joomla renders the template as usual, and the page's output is placed in that module position as is (no module chrome), after any modules already published there. In this mode the caveats below don't apply; the page is a fragment, not a full document.
+
 ## Caveats
 
-Because the response is sent and the application is closed during the component's dispatch, the rest of Joomla's request lifecycle doesn't run:
+With **No template**, because the response is sent and the application is closed during the component's dispatch, the rest of Joomla's request lifecycle doesn't run:
 
 | Not applied | Effect |
 | --- | --- |

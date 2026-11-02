@@ -29,10 +29,6 @@ $wa->useScript('keepalive')
     <div class="main-card p-3">
         <div class="row">
             <div class="col-lg-9 custompages-editor">
-                <div class="alert alert-warning">
-                    <span class="icon-warning" aria-hidden="true"></span>
-                    <?php echo Text::_('COM_CUSTOMPAGES_FIELD_HTML_WARNING'); ?>
-                </div>
                 <?php echo $this->form->renderField('html'); ?>
             </div>
             <div class="col-lg-3">

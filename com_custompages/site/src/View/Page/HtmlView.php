@@ -9,6 +9,7 @@
 
 namespace Joomla\Component\Custompages\Site\View\Page;
 
+use Joomla\CMS\Event\Module\AfterCleanModuleListEvent;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
@@ -18,11 +19,14 @@ use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 // phpcs:enable PSR1.Files.SideEffects
 
 /**
- * Outputs the stored page as the entire response.
+ * Outputs the stored page, either as the entire response or inside a template position.
  *
- * The template and the Joomla document are never rendered: output buffers are discarded,
- * the page is run as PHP, headers are sent, its output is echoed and the application is closed.
- * A page without `<?php` tags is plain HTML and comes out byte for byte.
+ * With "No template" (the default) the template and the Joomla document are never rendered:
+ * output buffers are discarded, the page is run as PHP, headers are sent, its output is echoed
+ * and the application is closed. A page without `<?php` tags is plain HTML and comes out byte for byte.
+ *
+ * With a template style, Joomla renders the page normally and the page's output is placed,
+ * without module chrome, in the chosen module position.
  */
 class HtmlView extends BaseHtmlView
 {
@@ -53,18 +57,28 @@ class HtmlView extends BaseHtmlView
             throw new \Exception(Text::_('JERROR_ALERTNOAUTHOR'), 403);
         }
 
+        $params = $model->getState('params');
+
         // Optional extra: Cache-Control from the menu item. Restricted pages must never be cached publicly.
-        $cacheControl = trim((string) $model->getState('params')->get('cache_control', ''));
+        $cacheControl = trim((string) $params->get('cache_control', ''));
 
         if ((int) $page->access !== 1) {
             $cacheControl = 'private, no-cache';
+        }
+
+        $templateStyle = (string) $params->get('template_style', 'none');
+
+        if ($templateStyle !== 'none' && $templateStyle !== '') {
+            $this->displayInTemplate($page, $app, $params, (int) $templateStyle, $cacheControl);
+
+            return;
         }
 
         while (ob_get_level()) {
             ob_end_clean();
         }
 
-        $output = self::runPhp($page, $app, $model->getState('params'));
+        $output = self::runPhp($page, $app, $params);
 
         // The page may have chosen its own Content-Type (e.g. JSON); only default it.
         if (!self::hasContentType($app)) {
@@ -83,6 +97,108 @@ class HtmlView extends BaseHtmlView
     }
 
     /**
+     * Lets Joomla render the template and places the page's output in the chosen module position.
+     *
+     * @param   object                                     $page          The page row.
+     * @param   \Joomla\CMS\Application\SiteApplication    $app           The application.
+     * @param   \Joomla\Registry\Registry                   $params        The menu item params.
+     * @param   integer                                    $styleId       Template style ID, 0 for the default one.
+     * @param   string                                     $cacheControl  Cache-Control header value, or ''.
+     *
+     * @return  void
+     */
+    private function displayInTemplate(object $page, $app, $params, int $styleId, string $cacheControl): void
+    {
+        if ($styleId > 0) {
+            $this->applyTemplateStyle($app, $styleId);
+        }
+
+        $this->setDocumentTitle((string) $params->get('page_title', '') ?: $page->title);
+
+        if ($cacheControl !== '') {
+            // Without this Joomla adds its own no-cache Cache-Control header next to ours.
+            $app->allowCache(true);
+            $app->setHeader('Cache-Control', $cacheControl, true);
+        }
+
+        $output   = self::runPhp($page, $app, $params);
+        $position = strtolower(trim((string) $params->get('template_position', '')));
+
+        // The form requires a position; if it is missing anyway, fall back to the component area.
+        if ($position === '') {
+            echo $output;
+
+            return;
+        }
+
+        // Add the page to the module list as an already rendered module, so the position counts
+        // as non-empty (countModules) and the output is printed as is ("none" chrome).
+        $module                  = new \stdClass();
+        $module->id              = 0;
+        $module->title           = $page->title;
+        $module->module          = 'mod_custom';
+        $module->name            = 'custom';
+        $module->position        = $position;
+        $module->content         = $output;
+        $module->contentRendered = true;
+        $module->showtitle       = 0;
+        $module->control         = '';
+        $module->params          = json_encode(['style' => 'System-none']);
+        $module->menuid          = 0;
+        $module->style           = null;
+
+        $app->getDispatcher()->addListener(
+            'onAfterCleanModuleList',
+            static function (AfterCleanModuleListEvent $event) use ($module) {
+                $modules   = $event->getModules();
+                $modules[] = $module;
+
+                $event->updateModules($modules);
+            }
+        );
+    }
+
+    /**
+     * Switches the site to the given template style for this request.
+     *
+     * Joomla picks the template before the component runs, so the template from the menu item
+     * (or the default style) is replaced here and the new template's asset registry is added.
+     * Unknown or disabled styles are ignored.
+     *
+     * @param   \Joomla\CMS\Application\SiteApplication  $app      The application.
+     * @param   integer                                  $styleId  The template style ID.
+     *
+     * @return  void
+     */
+    private function applyTemplateStyle($app, int $styleId): void
+    {
+        /** @var \Joomla\Component\Custompages\Site\Model\PageModel $model */
+        $model = $this->getModel();
+        $style = $model->getTemplateStyle($styleId);
+
+        if (!$style) {
+            return;
+        }
+
+        $previous = $app->getTemplate();
+
+        $app->setTemplate($style);
+
+        // Same template, other style: its assets are already registered.
+        if ($style->template === $previous) {
+            return;
+        }
+
+        $registry = $this->getDocument()->getWebAssetManager()->getRegistry();
+
+        if ($style->parent) {
+            $registry->addTemplateRegistryFile($style->parent, 0);
+        }
+
+        $registry->addTemplateRegistryFile($style->template, 0);
+    }
+
+    /**
      * Runs the page as PHP and returns what it printed.
      *
      * The source is evaluated like a PHP template file: it starts in HTML mode, so code goes
@@ -97,6 +213,9 @@ class HtmlView extends BaseHtmlView
      */
     private static function runPhp(object $page, $app, $params): string
     {
+        // Joomla's own buffers (template mode) are below this level and must be left alone.
+        $level = ob_get_level();
+
         ob_start();
 
         try {
@@ -104,7 +223,9 @@ class HtmlView extends BaseHtmlView
                 eval('?>' . $page->html);
             })($app, $page, $params);
         } catch (\Throwable $e) {
-            ob_end_clean();
+            while (ob_get_level() > $level) {
+                ob_end_clean();
+            }
 
             throw $e;
         }
@@ -112,7 +233,7 @@ class HtmlView extends BaseHtmlView
         // The script may have opened buffers of its own; collapse them all into the output.
         $output = '';
 
-        while (ob_get_level()) {
+        while (ob_get_level() > $level) {
             $output = ob_get_clean() . $output;
         }
 
